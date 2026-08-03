@@ -12,7 +12,7 @@ class Config:
     INPUT_DIR = BASE_DIR / "inputs"
     OUTPUT_DIR = BASE_DIR / "output"
 
-    # --- File Paths (Fixes RAW_SCRIPT AttributeError) ---
+    # --- File Paths ---
     RAW_SCRIPT = INPUT_DIR / "raw_script.txt"
     TEMP_DIR = OUTPUT_DIR / "temp"
     FINAL_VIDEO_DIR = OUTPUT_DIR / "final_video"
@@ -21,9 +21,7 @@ class Config:
     STABILITY_API_KEY = os.getenv("STABILITY_API_KEY", "")
 
     # --- Image Generation Settings ---
-    IMAGE_ENGINE_PROVIDER = (
-        "mock"  # Options: "mock", "stability", "pollinations"
-    )
+    IMAGE_ENGINE_PROVIDER = "mock"
     IMAGE_WIDTH = 1920
     IMAGE_HEIGHT = 1080
     STABILITY_ENGINE_ID = "stable-diffusion-v1-6"
@@ -38,9 +36,14 @@ class Config:
     VOICE_ATTENUATION_DB = -12.0
     NORMAL_BGM_DB = -4.0
 
+    @classmethod
+    def setup_directories(cls):
+        """Creates all required working directories safely"""
+        cls.INPUT_DIR.mkdir(parents=True, exist_ok=True)
+        cls.OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+        cls.TEMP_DIR.mkdir(parents=True, exist_ok=True)
+        cls.FINAL_VIDEO_DIR.mkdir(parents=True, exist_ok=True)
 
-# Ensure directories exist
-Config.INPUT_DIR.mkdir(parents=True, exist_ok=True)
-Config.OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-Config.TEMP_DIR.mkdir(parents=True, exist_ok=True)
-Config.FINAL_VIDEO_DIR.mkdir(parents=True, exist_ok=True)
+
+# Auto execution on import
+Config.setup_directories()
