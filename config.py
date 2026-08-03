@@ -12,10 +12,11 @@ class Config:
     INPUT_DIR = BASE_DIR / "inputs"
     OUTPUT_DIR = BASE_DIR / "output"
 
-    # --- File Paths (Safe Definitions) ---
+    # --- File & Directory Paths ---
     RAW_SCRIPT = INPUT_DIR / "raw_script.txt"
     TEMP_DIR = OUTPUT_DIR / "temp"
     FINAL_VIDEO_DIR = OUTPUT_DIR / "final_video"
+    SUBTITLE_DIR = OUTPUT_DIR / "subtitles"
     STATE_FILE = OUTPUT_DIR / "pipeline_state.json"
     LOGS_DIR = BASE_DIR / "logs"
 
@@ -46,6 +47,7 @@ class Config:
         cls.OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
         cls.TEMP_DIR.mkdir(parents=True, exist_ok=True)
         cls.FINAL_VIDEO_DIR.mkdir(parents=True, exist_ok=True)
+        cls.SUBTITLE_DIR.mkdir(parents=True, exist_ok=True)
         cls.LOGS_DIR.mkdir(parents=True, exist_ok=True)
 
 
