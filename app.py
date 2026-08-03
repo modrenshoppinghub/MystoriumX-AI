@@ -1,121 +1,88 @@
 """
-MystoriumX AI Studio - Web User Interface (Streamlit)
+MystoriumX AI Studio - Main Streamlit Dashboard
 """
-import streamlit as st
+
 from pathlib import Path
+import streamlit as st
+
 from config import Config
 from pipeline import DocumentaryPipeline
-from utils.file_manager import PipelineState
 
+# Page Setup
 st.set_page_config(
     page_title="MystoriumX AI Studio",
     page_icon="🎬",
-    layout="wide",
-    initial_sidebar_state="expanded"
+    layout="wide"
 )
 
-st.title("🎬 MystoriumX AI Studio - Automated Documentary Generator")
-st.markdown("Automated AI pipeline for producing YouTube-ready documentary videos, narrations, ducked audio, and subtitles.")
+st.title("🎬 MystoriumX AI Studio - Video & Voice Generator")
+st.markdown("---")
 
-# --- Sidebar Configuration ---
-st.sidebar.header("⚙️ Pipeline Configuration")
-
+# Sidebar - Settings
+st.sidebar.header("⚙️ Video Settings")
 voice_option = st.sidebar.selectbox(
-    "Narrator Voice (Edge-TTS)",
-    options=["en-US-ChristopherNeural", "en-US-GuyNeural", "en-GB-SoniaNeural"],
-    index=0
+    "🎙️ Select AI Voice Accent:",
+    options=[
+        "ur-PK-AsadNeural",        # Urdu Male (Natural)
+        "ur-PK-UzmaNeural",        # Urdu Female (Natural)
+        "en-US-ChristopherNeural", # English Male (Documentary)
+        "en-US-JennyNeural",       # English Female
+    ],
+    index=0,
 )
-Config.TTS_VOICE = voice_option
 
-whisper_model = st.sidebar.selectbox(
-    "Whisper Model Size",
-    options=["tiny", "base", "small", "medium"],
-    index=1
-)
-Config.WHISPER_MODEL_SIZE = whisper_model
-
-resolution_option = st.sidebar.selectbox(
-    "Export Resolution",
-    options=["1080p (1920x1080)", "720p (1280x720)"],
-    index=0
-)
-if "720p" in resolution_option:
-    Config.RESOLUTION = (1280, 720)
-
-st.sidebar.markdown("---")
-if st.sidebar.button("🗑️ Reset Pipeline State"):
-    state = PipelineState()
-    state.reset()
-    st.sidebar.success("Pipeline state cleared!")
-
-# --- Main Workspace ---
-tab1, tab2, tab3 = st.tabs(["📝 Script Input", "⚡ Pipeline Execution", "🍿 Output & Preview"])
-
-with tab1:
-    st.subheader("Documentary Script Input")
-    
-    # Read existing script if available
-    default_script_text = ""
-    if Config.RAW_SCRIPT.exists():
+# Fetch Default Script if exists
+default_script = ""
+if hasattr(Config, "RAW_SCRIPT") and Config.RAW_SCRIPT.exists():
+    try:
         with open(Config.RAW_SCRIPT, "r", encoding="utf-8") as f:
-            default_script_text = f.read()
+            default_script = f.read()
+    except Exception:
+        pass
 
-    script_input = st.text_area(
-        "Enter raw text or script scenes below:",
-        value=default_script_text,
-        height=300
-    )
+# Script Input Area
+st.subheader("📝 Enter Script Text")
+script_text = st.text_area(
+    "پست کریں یا یہاں اپنا اسکرپٹ لکھیں:",
+    value=default_script,
+    height=250,
+    placeholder="یہاں اپنا اردو یا انگلش اسکرپٹ لکھیں..."
+)
 
-    if st.button("💾 Save Script"):
-        Config.RAW_SCRIPT.parent.mkdir(parents=True, exist_ok=True)
-        with open(Config.RAW_SCRIPT, "w", encoding="utf-8") as f:
-            f.write(script_input)
-        st.success("Script updated successfully!")
-
-with tab2:
-    st.subheader("Run Master Generation Pipeline")
-    st.info("Clicking the button below will start the 9-stage video synthesis pipeline.")
-
-    if st.button("🚀 Start Production Pipeline", type="primary"):
-        with st.spinner("Processing pipeline... Please check console logs for step-by-step progress."):
+# Action Button
+if st.button("🚀 Generate Full Video & Voice", type="primary", use_container_width=True):
+    if not script_text.strip():
+        st.error("⚠️ برائے مہربانی ویڈیو بنانے کے لیے پہلے اسکرپٹ لکھیں!")
+    else:
+        with st.spinner("⏳ AI Voiceover، مناظر تیار کیے جا رہے ہیں اور ویڈیو رینڈر ہو رہی ہے..."):
             try:
                 pipeline = DocumentaryPipeline()
-                final_video_path = pipeline.run()
-                st.success(f"Production Complete! Master Video ready at: {final_video_path}")
-            except Exception as e:
-                st.error(f"Pipeline Execution Failed: {e}")
-
-with tab3:
-    st.subheader("Master Video Output & Subtitles")
-    output_video = Config.FINAL_VIDEO_DIR / "final_documentary.mp4"
-    output_srt = Config.SUBTITLE_DIR / "full_documentary.srt"
-
-    col1, col2 = st.columns([2, 1])
-
-    with col1:
-        if output_video.exists():
-            st.video(str(output_video))
-            with open(output_video, "rb") as file:
-                st.download_button(
-                    label="📥 Download Master Video (.MP4)",
-                    data=file,
-                    file_name="final_documentary.mp4",
-                    mime="video/mp4"
+                final_video_path = pipeline.run(
+                    script_text=script_text,
+                    voice=voice_option
                 )
-        else:
-            st.warning("No generated master video found. Run the pipeline first.")
 
-    with col2:
-        st.markdown("### Subtitles File (.SRT)")
-        if output_srt.exists():
-            with open(output_srt, "r", encoding="utf-8") as srt_file:
-                srt_content = srt_file.read()
-            st.text_area("Generated Transcript", value=srt_content, height=250)
-            st.download_button(
-                label="📥 Download Subtitles (.SRT)",
-                data=srt_content,
-                file_name="subtitles.srt",
-                mime="text/plain"
-            )
-        else:
-            st.info("Subtitles will appear here after rendering.")
+                if final_video_path and Path(final_video_path).exists():
+                    st.balloons()
+                    st.success("🎉 آپ کی ویڈیو اور آواز کامیابی سے تیار ہو چکی ہے!")
+
+                    st.markdown("---")
+                    st.subheader("📺 Video Player (پیش نظارہ)")
+                    
+                    # Display Video with Audio output directly in Streamlit
+                    st.video(str(final_video_path))
+
+                    # Download Button
+                    with open(final_video_path, "rb") as file:
+                        st.download_button(
+                            label="📥 Download Video MP4",
+                            data=file,
+                            file_name="mystoriumx_documentary.mp4",
+                            mime="video/mp4",
+                            use_container_width=True
+                        )
+                else:
+                    st.error("❌ ویڈیو کی فائل تیار نہیں ہو سکی، پاتھ غلط ہے۔")
+
+            except Exception as e:
+                st.error(f"❌ Pipeline Execution Failed: {str(e)}")
