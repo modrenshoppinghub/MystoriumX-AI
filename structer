@@ -1,0 +1,28 @@
+MystoriumX-AI-Studio/
+├── app.py                      # Streamlit GUI Interface
+├── cli.py                      # Command Line Runner
+├── config.py                   # Master Config & Paths
+├── pipeline.py                 # Core Execution Engine
+├── requirements.txt            # Python Dependencies
+├── packages.txt                # System Packages (FFmpeg)
+├── README.md                   # Documentation & Overview
+│
+├── modules/
+│   ├── __init__.py
+│   ├── script_engine.py        # Script Parsing & Cleaning
+│   ├── scene_detector.py       # Mood & Sentiment Analysis
+│   ├── prompt_generator.py     # AI Image Prompt Engineering
+│   ├── voice_engine.py         # Edge-TTS Narration Synthesis
+│   ├── image_engine.py         # Image Asset Generation
+│   ├── video_engine.py         # Motion & Scene Assembly
+│   ├── subtitle_engine.py      # OpenAI Whisper SRT Generator
+│   ├── music_engine.py         # Background Ambient Audio
+│   ├── sfx_engine.py           # Sound Effects Mapper
+│   ├── audio_ducking.py        # Dynamic Audio Leveling
+│   └── render_engine.py        # Final 1080p MP4 Exporter
+│
+└── utils/
+    ├── __init__.py
+    ├── helpers.py              # System & GPU Helpers
+    ├── logger.py               # Centralized Console Logger
+    └── file_manager.py         # State Persistence Engine
