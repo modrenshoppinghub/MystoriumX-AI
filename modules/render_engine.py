@@ -1,63 +1,59 @@
 """
-MystoriumX AI Studio - Final Video Rendering Engine
+MystoriumX AI Studio - Final Video Render Engine
 """
+
 from pathlib import Path
-from typing import Dict, List
-import moviepy.editor as mp
-from config import Config
 from utils.logger import setup_logger
+
+# --- MoviePy Version Compatibility Patch ---
+try:
+    import moviepy.editor as mp
+except ImportError:
+    import moviepy as mp
+# -------------------------------------------
 
 logger = setup_logger("RenderEngine")
 
 
 class RenderEngine:
-    """Combines scene video clips, audio tracks, and transitions into a complete documentary."""
 
-    def render_final_video(
-        self, scenes: List[Dict[str, str]], mastered_audio_path: Path
+    def __init__(self, fps: int = 30, resolution: tuple = (1920, 1080)):
+        self.fps = fps
+        self.resolution = resolution
+
+    def export_video(
+        self, video_clips: list, audio_path: Path, output_path: Path
     ) -> Path:
-        """Stitches clips into a single video file and syncs with mastered audio."""
-        output_video_path = Config.FINAL_VIDEO_DIR / "final_documentary.mp4"
-        logger.info("Assembling final video timeline...")
+        """تمام ویڈیو کلپس اور مکسڈ آڈیو کو ملا کر 1080p MP4 ایکسپورٹ کرتا ہے"""
+        logger.info(
+            f"Assembling {len(video_clips)} clips into final documentary..."
+        )
 
         try:
-            clips = []
-            for scene in scenes:
-                clip_path = scene["clip_path"]
-                clip = mp.VideoFileClip(clip_path)
-
-                # Add crossfade transition effect if scene isn't the first
-                if len(clips) > 0:
-                    clip = clip.crossfadein(Config.CROSSFADE_DURATION)
-
-                clips.append(clip)
-
-            logger.info("Concatenating video scenes...")
-            concatenated = mp.concatenate_videoclips(clips, method="compose")
-
-            # Attach final ducked and mastered audio track
-            master_audio = mp.AudioFileClip(str(mastered_audio_path))
-            final_video = concatenated.set_audio(master_audio)
-
-            logger.info(f"Rendering output file to {output_video_path} (FPS: {Config.FPS})...")
-            final_video.write_videofile(
-                str(output_video_path),
-                fps=Config.FPS,
-                codec=Config.VIDEO_CODEC,
-                audio_codec=Config.AUDIO_CODEC,
-                threads=4,
-                logger=None,
+            # ویڈیو کلپس کو یکجا کریں
+            final_clip = mp.concatenate_videoclips(
+                video_clips, method="compose"
             )
 
-            # Cleanup open file handles
-            for clip in clips:
-                clip.close()
-            final_video.close()
-            master_audio.close()
+            # آڈیو اٹیچ کریں
+            if audio_path and audio_path.exists():
+                audio_clip = mp.AudioFileClip(str(audio_path))
+                final_clip = final_clip.set_audio(audio_clip)
 
-            logger.info(f"Rendering complete! Master video saved at: {output_video_path}")
-            return output_video_path
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+
+            # MP4 رینڈر کریں
+            final_clip.write_videofile(
+                str(output_path),
+                fps=self.fps,
+                codec="libx264",
+                audio_codec="aac",
+                logger=None,  # Suppress moviepy stdout logs
+            )
+
+            logger.info(f"Final video successfully exported to: {output_path}")
+            return output_path
 
         except Exception as e:
-            logger.error(f"Error rendering final video pipeline: {e}")
+            logger.error(f"Failed to render video: {e}")
             raise e
