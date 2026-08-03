@@ -1,63 +1,46 @@
 """
-MystoriumX AI Studio - Global Configuration Manager
+MystoriumX AI Studio - Master Configuration File
 """
+
 import os
 from pathlib import Path
 
 
 class Config:
-    # Root Directory Paths
+    # --- Base Paths ---
     BASE_DIR = Path(__file__).resolve().parent
-    INPUT_DIR = BASE_DIR / "input"
+    INPUT_DIR = BASE_DIR / "inputs"
     OUTPUT_DIR = BASE_DIR / "output"
-    ASSETS_DIR = BASE_DIR / "assets"
 
-    # Google Drive Mount Path for Colab Environment
-    DRIVE_MOUNT_PATH = Path("/content/drive/MyDrive/MystoriumX_Studio_Output")
-
-    # Input Files Paths
-    SCRIPT_PATH = INPUT_DIR / "script.txt"
-    SETTINGS_PATH = INPUT_DIR / "settings.json"
-    STATE_FILE = OUTPUT_DIR / "pipeline_state.json"
-
-    # Output Sub-directories
-    AUDIO_DIR = OUTPUT_DIR / "audio"
-    IMAGE_DIR = OUTPUT_DIR / "images"
-    SUBTITLE_DIR = OUTPUT_DIR / "subtitles"
-    THUMBNAIL_DIR = OUTPUT_DIR / "thumbnail"
+    # --- File Paths (Fixes RAW_SCRIPT AttributeError) ---
+    RAW_SCRIPT = INPUT_DIR / "raw_script.txt"
+    TEMP_DIR = OUTPUT_DIR / "temp"
     FINAL_VIDEO_DIR = OUTPUT_DIR / "final_video"
 
-    # Assets Sub-directories
-    FONTS_DIR = ASSETS_DIR / "fonts"
-    MUSIC_DIR = ASSETS_DIR / "music"
-    SFX_DIR = ASSETS_DIR / "sfx"
-    LOGO_DIR = ASSETS_DIR / "logo"
+    # --- API Keys Configuration ---
+    STABILITY_API_KEY = os.getenv("STABILITY_API_KEY", "")
 
-    # Default Render Configurations
-    FPS = 30
-    RESOLUTION = (1920, 1080)  # 16:9 Standard Documentary Resolution (Width, Height)
-    FONT_PATH = FONTS_DIR / "Cinematic.ttf"
+    # --- Image Generation Settings ---
+    IMAGE_ENGINE_PROVIDER = (
+        "mock"  # Options: "mock", "stability", "pollinations"
+    )
+    IMAGE_WIDTH = 1920
+    IMAGE_HEIGHT = 1080
+    STABILITY_ENGINE_ID = "stable-diffusion-v1-6"
 
-    # AI Engine Models & TTS Configurations
-    WHISPER_MODEL_SIZE = "small"
-    TTS_VOICE = "en-US-ChristopherNeural"  # Deep Narrative Documentary Voice
+    # --- Video & Audio Settings ---
+    VIDEO_FPS = 30
+    VIDEO_RESOLUTION = (1920, 1080)
+    DEFAULT_VOICE = "en-US-ChristopherNeural"
+    DEFAULT_WHISPER_MODEL = "base"
 
-    @classmethod
-    def initialize_directories(cls):
-        """Ensures all necessary project directories exist before runtime."""
-        directories = [
-            cls.INPUT_DIR,
-            cls.OUTPUT_DIR,
-            cls.ASSETS_DIR,
-            cls.AUDIO_DIR,
-            cls.IMAGE_DIR,
-            cls.SUBTITLE_DIR,
-            cls.THUMBNAIL_DIR,
-            cls.FINAL_VIDEO_DIR,
-            cls.FONTS_DIR,
-            cls.MUSIC_DIR,
-            cls.SFX_DIR,
-            cls.LOGO_DIR,
-        ]
-        for directory in directories:
-            directory.mkdir(parents=True, exist_ok=True)
+    # Audio Ducking Settings (dB)
+    VOICE_ATTENUATION_DB = -12.0
+    NORMAL_BGM_DB = -4.0
+
+
+# Ensure directories exist
+Config.INPUT_DIR.mkdir(parents=True, exist_ok=True)
+Config.OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+Config.TEMP_DIR.mkdir(parents=True, exist_ok=True)
+Config.FINAL_VIDEO_DIR.mkdir(parents=True, exist_ok=True)
