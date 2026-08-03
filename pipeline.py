@@ -1,132 +1,135 @@
 """
-MystoriumX AI Studio - End-to-End Master Pipeline Execution
+MystoriumX AI Studio - Complete Master Pipeline Orchestrator
 """
+
 from pathlib import Path
+import re
 from config import Config
 from modules.audio_ducking import AudioDuckingEngine
 from modules.image_engine import ImageEngine
-from modules.music_engine import MusicEngine
-from modules.prompt_generator import PromptGenerator
 from modules.render_engine import RenderEngine
-from modules.scene_detector import SceneDetector
-from modules.script_engine import ScriptEngine
-from modules.sfx_engine import SFXEngine
-from modules.subtitle_engine import SubtitleEngine
-from modules.video_engine import VideoEngine
-from modules.voice_engine import VoiceEngine
 from utils.file_manager import PipelineState
 from utils.logger import setup_logger
+
+# --- MoviePy Safe Import ---
+try:
+    import moviepy.editor as mp
+except ImportError:
+    import moviepy as mp
 
 logger = setup_logger("Pipeline")
 
 
 class DocumentaryPipeline:
-    """Orchestrates end-to-end automated documentary video creation pipeline."""
+    """Orchestrates end-to-end automated documentary video creation pipeline"""
 
-    def __init__(self, script_path: Path = Config.RAW_SCRIPT):
-        Config.setup_directories()
-        self.script_path = script_path
+    def __init__(self, script_path: Path = None):
+        # 1. Ensure output and input directories exist
+        if hasattr(Config, "setup_directories"):
+            Config.setup_directories()
+
+        # 2. Safe fallback for script path
+        if script_path is not None:
+            self.script_path = Path(script_path)
+        else:
+            self.script_path = getattr(
+                Config, "RAW_SCRIPT", Config.INPUT_DIR / "raw_script.txt"
+            )
+
         self.state = PipelineState()
 
-    def run(self):
-        """Executes full generation sequence with stage state tracking and dynamic resuming."""
-        logger.info("===============================================")
-        logger.info("   MYSTORIUMX AI STUDIO - PIPELINE INITIALIZED  ")
-        logger.info("===============================================")
+        # 3. Initialize Engine Components
+        self.image_engine = ImageEngine()
+        self.audio_ducking_engine = AudioDuckingEngine(
+            voice_attenuation_db=getattr(Config, "VOICE_ATTENUATION_DB", -12.0),
+            normal_bgm_db=getattr(Config, "NORMAL_BGM_DB", -4.0),
+        )
+        self.render_engine = RenderEngine(
+            fps=getattr(Config, "VIDEO_FPS", 30),
+            resolution=getattr(Config, "VIDEO_RESOLUTION", (1920, 1080)),
+        )
 
-        # Stage 1: Script Parsing
-        if not self.state.is_completed("script_parsing"):
-            script_eng = ScriptEngine(self.script_path)
-            scenes = script_eng.load_and_parse()
-            self.state.update_stage("script_parsing", scenes)
-        else:
-            scenes = self.state.get_stage_data("script_parsing")
-            logger.info("Resuming: Loaded parsed script from pipeline state.")
+    def _parse_script_into_scenes(self, script_text: str) -> list:
+        """اسکرپٹ کو جملوں اور مناظر کی بنیاد پر تقسیم کرتا ہے"""
+        sentences = re.split(r"(?<=[.!?])\s+", script_text.strip())
+        scenes = [s.strip() for s in sentences if s.strip()]
+        return scenes if scenes else [script_text]
 
-        # Stage 2: Scene Mood Analysis
-        if not self.state.is_completed("mood_detection"):
-            detector = SceneDetector()
-            scenes = detector.analyze_scenes(scenes)
-            self.state.update_stage("mood_detection", scenes)
-        else:
-            scenes = self.state.get_stage_data("mood_detection")
+    def run_pipeline(
+        self,
+        script_text: str = None,
+        voice: str = None,
+        whisper_model: str = None,
+    ) -> Path:
+        """Runs the complete end-to-end video pipeline"""
+        logger.info("🎬 Starting MystoriumX AI Studio Pipeline Run...")
 
-        # Stage 3: Prompt Engineering
-        if not self.state.is_completed("prompt_generation"):
-            prompt_gen = PromptGenerator()
-            scenes = prompt_gen.generate_prompts(scenes)
-            self.state.update_stage("prompt_generation", scenes)
-        else:
-            scenes = self.state.get_stage_data("prompt_generation")
+        selected_voice = voice or getattr(
+            Config, "DEFAULT_VOICE", "en-US-ChristopherNeural"
+        )
+        selected_model = whisper_model or getattr(
+            Config, "DEFAULT_WHISPER_MODEL", "base"
+        )
 
-        # Stage 4: Voiceover Synthesis
-        if not self.state.is_completed("voice_synthesis"):
-            voice_eng = VoiceEngine()
-            scenes = voice_eng.process_narration(scenes)
-            self.state.update_stage("voice_synthesis", scenes)
-        else:
-            scenes = self.state.get_stage_data("voice_synthesis")
+        # Step 1: Save Script Text if provided directly
+        if script_text:
+            self.script_path.parent.mkdir(parents=True, exist_ok=True)
+            with open(self.script_path, "w", encoding="utf-8") as f:
+                f.write(script_text.strip())
+            logger.info(f"Script written to: {self.script_path}")
 
-        # Stage 5: Image Assets Generation
-        if not self.state.is_completed("image_generation"):
-            image_eng = ImageEngine()
-            scenes = image_eng.generate_images(scenes)
-            self.state.update_stage("image_generation", scenes)
-        else:
-            scenes = self.state.get_stage_data("image_generation")
+        # Step 2: Ensure Script File Exists
+        if not self.script_path.exists():
+            raise FileNotFoundError(
+                f"Script file not found at: {self.script_path}"
+            )
 
-        # Stage 6: Video Scene Clips Assembly
-        if not self.state.is_completed("video_clips"):
-            video_eng = VideoEngine()
-            scenes = video_eng.create_scene_clips(scenes)
-            self.state.update_stage("video_clips", scenes)
-        else:
-            scenes = self.state.get_stage_data("video_clips")
+        with open(self.script_path, "r", encoding="utf-8") as f:
+            raw_script_content = f.read()
 
-        # Stage 7: Subtitle & Transcription Generation
-        if not self.state.is_completed("subtitles"):
-            sub_eng = SubtitleEngine()
-            scenes = sub_eng.generate_subtitles(scenes)
-            self.state.update_stage("subtitles", scenes)
-        else:
-            scenes = self.state.get_stage_data("subtitles")
+        scenes = self._parse_script_into_scenes(raw_script_content)
+        logger.info(
+            f"Parsed {len(scenes)} scenes/prompts from the raw script."
+        )
 
-        # Stage 8: Background Music & Audio Ducking
-        if not self.state.is_completed("master_audio"):
-            total_duration = sum(s.get("duration", 0.0) for s in scenes)
-            music_eng = MusicEngine()
-            bg_music_path = music_eng.generate_ambient_track(scenes, total_duration)
+        temp_dir = getattr(Config, "TEMP_DIR", Config.OUTPUT_DIR / "temp")
+        temp_dir.mkdir(parents=True, exist_ok=True)
 
-            sfx_eng = SFXEngine()
-            scenes = sfx_eng.process_sfx(scenes)
+        # Step 3: Generate Visuals for Each Scene
+        image_clips = []
+        scene_duration = 5.0  # Default display duration per image in seconds
 
-            ducking_eng = AudioDuckingEngine()
-            mastered_audio = ducking_eng.process_audio(scenes, bg_music_path)
+        for idx, scene_prompt in enumerate(scenes, start=1):
+            img_output_path = temp_dir / f"scene_{idx}.png"
+            logger.info(f"Generating scene {idx}/{len(scenes)}...")
 
-            audio_data = {
-                "mastered_audio_path": str(mastered_audio),
-                "scenes": scenes,
-            }
-            self.state.update_stage("master_audio", audio_data)
-        else:
-            audio_data = self.state.get_stage_data("master_audio")
-            mastered_audio = Path(audio_data["mastered_audio_path"])
-            scenes = audio_data["scenes"]
+            # Generate AI image or placeholder using ImageEngine
+            saved_img_path = self.image_engine.generate_image(
+                prompt=scene_prompt, output_path=img_output_path
+            )
 
-        # Stage 9: Final Master Video Rendering
-        if not self.state.is_completed("final_render"):
-            renderer = RenderEngine()
-            final_video_path = renderer.render_final_video(scenes, mastered_audio)
-            self.state.update_stage("final_render", str(final_video_path))
-        else:
-            final_video_path = Path(self.state.get_stage_data("final_render"))
+            # Create MoviePy ImageClip for each visual
+            clip = mp.ImageClip(str(saved_img_path)).set_duration(
+                scene_duration
+            )
+            image_clips.append(clip)
 
-        logger.info("===============================================")
-        logger.info(f" PIPELINE COMPLETE! OUTPUT: {final_video_path}")
-        logger.info("===============================================")
-        return final_video_path
+        # Step 4: Define Output Directories and Paths
+        final_video_dir = getattr(
+            Config, "FINAL_VIDEO_DIR", Config.OUTPUT_DIR / "final_video"
+        )
+        final_video_dir.mkdir(parents=True, exist_ok=True)
+        final_video_path = final_video_dir / "final_documentary.mp4"
 
+        # Step 5: Render Video using RenderEngine
+        logger.info("Assembling video clips and exporting final MP4...")
+        rendered_path = self.render_engine.export_video(
+            video_clips=image_clips,
+            audio_path=None,  # Pass mixed audio path here when TTS is enabled
+            output_path=final_video_path,
+        )
 
-if __name__ == "__main__":
-    pipeline = DocumentaryPipeline()
-    pipeline.run()
+        logger.info(
+            f"🚀 Pipeline completed successfully! Video created at: {rendered_path}"
+        )
+        return rendered_path
