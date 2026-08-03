@@ -12,16 +12,19 @@ class Config:
     INPUT_DIR = BASE_DIR / "inputs"
     OUTPUT_DIR = BASE_DIR / "output"
 
-    # --- File Paths ---
+    # --- File Paths (Safe Definitions) ---
     RAW_SCRIPT = INPUT_DIR / "raw_script.txt"
     TEMP_DIR = OUTPUT_DIR / "temp"
     FINAL_VIDEO_DIR = OUTPUT_DIR / "final_video"
+    STATE_FILE = OUTPUT_DIR / "pipeline_state.json"
+    LOGS_DIR = BASE_DIR / "logs"
 
     # --- API Keys Configuration ---
     STABILITY_API_KEY = os.getenv("STABILITY_API_KEY", "")
+    ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY", "")
 
     # --- Image Generation Settings ---
-    IMAGE_ENGINE_PROVIDER = "mock"
+    IMAGE_ENGINE_PROVIDER = "mock"  # Options: "mock", "stability", "pollinations"
     IMAGE_WIDTH = 1920
     IMAGE_HEIGHT = 1080
     STABILITY_ENGINE_ID = "stable-diffusion-v1-6"
@@ -43,7 +46,8 @@ class Config:
         cls.OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
         cls.TEMP_DIR.mkdir(parents=True, exist_ok=True)
         cls.FINAL_VIDEO_DIR.mkdir(parents=True, exist_ok=True)
+        cls.LOGS_DIR.mkdir(parents=True, exist_ok=True)
 
 
-# Auto execution on import
+# Execute setup immediately upon import
 Config.setup_directories()
