@@ -60,6 +60,7 @@ class DocumentaryPipeline:
         script_text: str = None,
         voice: str = None,
         whisper_model: str = None,
+        **kwargs,
     ) -> Path:
         """Runs the complete end-to-end video pipeline"""
         logger.info("🎬 Starting MystoriumX AI Studio Pipeline Run...")
@@ -133,3 +134,7 @@ class DocumentaryPipeline:
             f"🚀 Pipeline completed successfully! Video created at: {rendered_path}"
         )
         return rendered_path
+
+    def run(self, *args, **kwargs) -> Path:
+        """Alias for app.py compatibility"""
+        return self.run_pipeline(*args, **kwargs)
